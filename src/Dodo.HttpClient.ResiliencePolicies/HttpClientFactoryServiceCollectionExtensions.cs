@@ -19,7 +19,22 @@ namespace Dodo.HttpClientResiliencePolicies
 			where TClientImplementation : class, TClientInterface
 		{
 			return AddJsonClient<TClientInterface, TClientImplementation>(
-				sc, baseAddress, new ResiliencePoliciesSettings(), clientName);
+				sc, _ => baseAddress, new ResiliencePoliciesSettings(), clientName);
+		}
+
+		/// <summary>
+		/// Adds the <see cref="IHttpClientFactory"/> and related services to the <see cref="IServiceCollection"/>
+		/// with pre-configured JSON headers, HttpClient Timeout and resilience policies.
+		/// </summary>
+		/// <returns>An <see cref="IHttpClientBuilder"/> that can be used to configure the client.</returns>
+		public static IHttpClientBuilder AddJsonClient<TClientInterface, TClientImplementation>(
+			this IServiceCollection sc,
+			Func<IServiceProvider, Uri> baseAddressProvider,
+			string clientName = null) where TClientInterface : class
+			where TClientImplementation : class, TClientInterface
+		{
+			return AddJsonClient<TClientInterface, TClientImplementation>(
+				sc, baseAddressProvider, new ResiliencePoliciesSettings(), clientName);
 		}
 
 		/// <summary>
@@ -34,11 +49,27 @@ namespace Dodo.HttpClientResiliencePolicies
 			string clientName = null) where TClientInterface : class
 			where TClientImplementation : class, TClientInterface
 		{
+			return AddJsonClient<TClientInterface, TClientImplementation>(
+				sc, _ => baseAddress, settings, clientName);
+		}
+
+		/// <summary>
+		/// Adds the <see cref="IHttpClientFactory"/> and related services to the <see cref="IServiceCollection"/>
+		/// with pre-configured JSON headers and custom resilience policies.
+		/// </summary>
+		/// <returns>An <see cref="IHttpClientBuilder"/> that can be used to configure the client.</returns>
+		public static IHttpClientBuilder AddJsonClient<TClientInterface, TClientImplementation>(
+			this IServiceCollection sc,
+			Func<IServiceProvider, Uri> baseAddressProvider,
+			ResiliencePoliciesSettings settings,
+			string clientName = null) where TClientInterface : class
+			where TClientImplementation : class, TClientInterface
+		{
 			var delta = TimeSpan.FromMilliseconds(1000);
 
-			void DefaultClient(HttpClient client)
+			void DefaultClient(IServiceProvider provider, HttpClient client)
 			{
-				client.BaseAddress = baseAddress;
+				client.BaseAddress = baseAddressProvider(provider);
 				client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 				client.Timeout = settings.OverallTimeout + delta;
 			}
